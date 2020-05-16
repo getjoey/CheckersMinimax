@@ -1,0 +1,184 @@
+
+<html>
+
+    <div class="center">
+        <p id="turn" style="font-size : 30px;">Blacks Turn</p>
+        <canvas class="center" style="border: 3px solid green;" id="canvas" width="600" height="600">Your browser does not support the HTML5 canvas tag.</canvas>
+    <div>
+
+    <script>
+        //note double jump is not implemented
+        //no ai currently
+        var canvas;
+        var ctx;
+        var turnHeader;
+
+        var dim = 600/8;
+        var turn = "B";
+        var activePiece = null; //an array positions (i,j);
+
+        var board = [ //top down
+            ['','W','','W','','W','','W'],
+            ['W','','W','','W','','W',''],
+            ['','W','','W','','W','','W'],
+            ['','','','','','','',''],
+            ['','','','','','','',''],
+            ['B','','B','','B','','B',''],
+            ['','B','','B','','B','','B'],
+            ['B','','B','','B','','B','']
+        ];
+        
+        window.onload = function() {
+            canvas = document.getElementById("canvas");
+            ctx = canvas.getContext("2d");
+            turnHeader = document.getElementById("turn");
+            drawTable();
+            drawPieces();
+
+            canvas.addEventListener('mousedown', function(e) {
+                const posDex = getCursorPosition(canvas, e);
+                
+                if(activePiece == null) {
+                    let c = board[posDex[1]][posDex[0]];
+                    if((c == 'W' || c == 'B') && turn == c) {
+                        activePiece = posDex;
+                    }
+                }
+                else {
+                    //place active piece where u clicked
+                    let valueofPlaceToBe = board[posDex[1]][posDex[0]];
+                    let c = board[activePiece[1]][activePiece[0]];
+                    let validity = isMoveValid(posDex, c);
+                    if(valueofPlaceToBe == '' && validity[0] == true) {
+
+                        if(validity[1] == "ate") {
+                            let posOfEatenPiece = validity[2];
+                            board[posOfEatenPiece[1]][posOfEatenPiece[0]] = ''; //remove eaten piece
+                        }
+
+                        board[posDex[1]][posDex[0]] = c;
+                        board[activePiece[1]][activePiece[0]] = '';
+                        activePiece = null;
+                        turn = turn == 'W' ? 'B' : 'W'; //switch turn
+                        setTurnHeader();
+                    }
+                    else if(activePiece[0] == posDex[0] && activePiece[1] == posDex[1]) { //click same pos removes it as active piece
+                        activePiece = null;
+                    }
+                }
+               
+                drawTable();
+                drawPieces();
+            });
+        };
+
+        function setTurnHeader() {
+            if(turn == 'W') {
+                turnHeader.innerText = "Whites Turn"
+            }
+            else {
+                turnHeader.innerText = "Blacks Turn"
+            }
+        }
+
+        function isMoveValid(posDexToCheck, colorOfPiece) {
+            
+            let yDif = posDexToCheck[1] - activePiece[1];
+            let xDif = posDexToCheck[0] - activePiece[0];
+            //normal move
+            //can only jump diagonals foward. 
+            //if white y greater than current
+            //if black y less than current
+            if(colorOfPiece == 'W' && yDif == 1 && Math.abs(xDif) == 1) {
+                return [true, ""];
+            }
+            else if(colorOfPiece == 'B' && yDif == -1 && Math.abs(xDif) == 1) {
+                return [true, ""];
+            }
+            //killing move check
+            if(colorOfPiece == 'W' && yDif == 2 && Math.abs(xDif) == 2) {
+                //check space in between
+                let xMid = activePiece[0] + xDif/2;
+                let yMid = activePiece[1] + yDif/2;
+                if(board[yMid][xMid] == 'B') {
+                    return [true, "ate", [xMid, yMid]];
+                }
+            }
+            else if(colorOfPiece == 'B' && yDif == -2 && Math.abs(xDif) == 2) {
+                let xMid = activePiece[0] + xDif/2;
+                let yMid = activePiece[1] + yDif/2;
+                if(board[yMid][xMid] == 'W') {
+                    return [true, "ate", [xMid, yMid]];
+                }
+            }
+
+            //king move check
+
+            return [false, ""];
+        }
+
+        //click a tile, if it has a piece, and its equivalent to the turn, set it active
+
+        function drawTable() {
+            let white = true;
+            for(let i=0; i<8; i++) {
+                white = i%2==0 ? true : false;
+                for(let j=0; j<8; j++) {
+
+                    if(white) {
+                        ctx.fillStyle = "white";
+                        white = false;
+                    }
+                    else {
+                        ctx.fillStyle = "black";
+                        white = true;
+                    }
+
+                    ctx.fillRect(i*dim , j * dim, dim, dim);
+                }
+            }
+            ctx.fillStyle = "grey";
+            ctx.strokeRect(0, 0, 600, 600);
+        }
+
+        function drawPieces() {
+            for(let i=0; i<9; i++) {
+                for(let j=0; j<8; j++) {
+                    let c = board[j][i];
+                    if(c != '') {
+                        
+                        ctx.beginPath();
+                        ctx.arc(i*dim+dim/2 , j * dim+dim/2, dim/3, 0, 2 * Math.PI);
+                        if(c == 'B') {
+                            ctx.fillStyle = "#888894"
+                            if(activePiece != null && activePiece[1] == j && activePiece[0] ==i) {
+                                ctx.fillStyle = "#388894"
+                            }
+                        }
+                        else if(c == 'W') {
+                            ctx.fillStyle = "#d8d8e8";
+                            if(activePiece != null && activePiece[1] == j && activePiece[0] ==i) {
+                                ctx.fillStyle = "#e8d8e8"
+                            }
+                        }
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function getCursorPosition(canvas, event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            const xIndex = Math.floor(x / dim);
+            const yIndex = Math.floor(y / dim);
+            return [xIndex, yIndex];
+         }
+
+    </script>
+
+
+
+</html>
