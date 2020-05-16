@@ -110,9 +110,24 @@
 
 
 
-        //WIP
+        //WIP //note: aiColor = "W";
         function getBestMoveAi() {
             miniMax(0, true);
+        }
+
+        function getAllMoves() {
+            let movesList = [];
+            
+            //go through all pieces.. if this is one of your pieces. find every move it can do.
+            //if its a move that eats +1, if king +3; otherwise 0.
+            //TODO
+
+            return moveList;
+        }
+
+        function isGameComplete() {
+            //if allMoves for Black is 0 and all moves for White is 0. Game Over. //TODO
+            return false;
         }
 
         function miniMax(depth, isMaximizingPlayer) {
