@@ -1,7 +1,7 @@
 
 <html>
 
-    <div class="center">
+    <div style="text-align: center;">
         <p id="turn" style="font-size : 30px;">Blacks Turn</p>
         <canvas class="center" style="border: 3px solid green;" id="canvas" width="600" height="600">Your browser does not support the HTML5 canvas tag.</canvas>
     <div>
@@ -14,16 +14,17 @@
         var turnHeader;
 
         var dim = 600/8;
-        var turn = "B";
+        var turn = 'B';
+        const aiColor = 'W';
         var activePiece = null; //an array positions (i,j);
 
         var board = [ //top down
             ['','W','','W','','W','','W'],
             ['W','','W','','W','','W',''],
-            ['','W','','W','','W','','W'],
+            ['','KW','','W','','W','','W'],
             ['','','','','','','',''],
             ['','','','','','','',''],
-            ['B','','B','','B','','B',''],
+            ['B','','KB','','B','','B',''],
             ['','B','','B','','B','','B'],
             ['B','','B','','B','','B','']
         ];
@@ -40,6 +41,9 @@
                 
                 if(activePiece == null) {
                     let c = board[posDex[1]][posDex[0]];
+                    if(c.length == 2) {
+                        c = c.charAt(1); //in event its a King piece, remove the K part
+                    }
                     if((c == 'W' || c == 'B') && turn == c) {
                         activePiece = posDex;
                     }
@@ -48,12 +52,30 @@
                     //place active piece where u clicked
                     let valueofPlaceToBe = board[posDex[1]][posDex[0]];
                     let c = board[activePiece[1]][activePiece[0]];
-                    let validity = isMoveValid(posDex, c);
+                    console.log("active piece is a "+c);
+                    let validity = isMoveValid(posDex);
                     if(valueofPlaceToBe == '' && validity[0] == true) {
 
                         if(validity[1] == "ate") {
                             let posOfEatenPiece = validity[2];
                             board[posOfEatenPiece[1]][posOfEatenPiece[0]] = ''; //remove eaten piece
+                        }
+
+                        //check if active piece has become a king
+                        console.log(posDex[1]);
+                        if(turn == 'W') {
+                            //y == 7 is king
+                            if(posDex[1] == 7) {
+                                console.log("white is king");
+                                c = 'KW'
+                            }
+                        }
+                        else {
+                            //y == 0 is king
+                            if(posDex[1] == 0) {
+                                console.log("black is king");
+                                c='KB'
+                            }
                         }
 
                         board[posDex[1]][posDex[0]] = c;
@@ -81,7 +103,7 @@
             }
         }
 
-        function isMoveValid(posDexToCheck, colorOfPiece) {
+        function isMoveValid(posDexToCheck) {
             
             let yDif = posDexToCheck[1] - activePiece[1];
             let xDif = posDexToCheck[0] - activePiece[0];
@@ -89,30 +111,51 @@
             //can only jump diagonals foward. 
             //if white y greater than current
             //if black y less than current
-            if(colorOfPiece == 'W' && yDif == 1 && Math.abs(xDif) == 1) {
-                return [true, ""];
-            }
-            else if(colorOfPiece == 'B' && yDif == -1 && Math.abs(xDif) == 1) {
-                return [true, ""];
-            }
-            //killing move check
-            if(colorOfPiece == 'W' && yDif == 2 && Math.abs(xDif) == 2) {
-                //check space in between
-                let xMid = activePiece[0] + xDif/2;
-                let yMid = activePiece[1] + yDif/2;
-                if(board[yMid][xMid] == 'B') {
-                    return [true, "ate", [xMid, yMid]];
+            let isThisAKingPiece = board[activePiece[1]][activePiece[0]].length == 2;
+            if(!isThisAKingPiece) {
+                if(turn == 'W' && yDif == 1 && Math.abs(xDif) == 1) {
+                    return [true, ""];
+                }
+                else if(turn == 'B' && yDif == -1 && Math.abs(xDif) == 1) {
+                    return [true, ""];
+                }
+                //killing move check
+                if(turn == 'W' && yDif == 2 && Math.abs(xDif) == 2) {
+                    //check space in between
+                    let xMid = activePiece[0] + xDif/2;
+                    let yMid = activePiece[1] + yDif/2;
+                    if(board[yMid][xMid] == 'B' || board[yMid][xMid] == 'KB') {
+                        return [true, "ate", [xMid, yMid]];
+                    }
+                }
+                else if(turn == 'B' && yDif == -2 && Math.abs(xDif) == 2) {
+                    let xMid = activePiece[0] + xDif/2;
+                    let yMid = activePiece[1] + yDif/2;
+                    if(board[yMid][xMid] == 'W' || board[yMid][xMid] == 'KW') {
+                        return [true, "ate", [xMid, yMid]];
+                    }
                 }
             }
-            else if(colorOfPiece == 'B' && yDif == -2 && Math.abs(xDif) == 2) {
-                let xMid = activePiece[0] + xDif/2;
-                let yMid = activePiece[1] + yDif/2;
-                if(board[yMid][xMid] == 'W') {
-                    return [true, "ate", [xMid, yMid]];
+            else {
+                if(Math.abs(yDif) == 1 && Math.abs(xDif) == 1) {
+                    return [true, ""];
+                }
+                //killing move check
+                if(Math.abs(yDif) == 2 && Math.abs(xDif) == 2) {
+                    let xMid = activePiece[0] + xDif/2;
+                    let yMid = activePiece[1] + yDif/2;
+                    if(turn == 'B' && (board[yMid][xMid] == 'W' || board[yMid][xMid] == 'KW')) {
+                        return [true, "ate", [xMid, yMid]];
+                    }
+                    else if(turn == 'W' && (board[yMid][xMid] == 'B' || board[yMid][xMid] == 'KB')) {
+                        return [true, "ate", [xMid, yMid]];
+                    }
                 }
             }
 
-            //king move check
+           
+
+            //king move check 
 
             return [false, ""];
         }
@@ -155,10 +198,22 @@
                                 ctx.fillStyle = "#388894"
                             }
                         }
+                        else if(c == 'KB') {
+                            ctx.fillStyle = "#841194"
+                            if(activePiece != null && activePiece[1] == j && activePiece[0] ==i) {
+                                ctx.fillStyle = "#375522"
+                            }
+                        }
                         else if(c == 'W') {
                             ctx.fillStyle = "#d8d8e8";
                             if(activePiece != null && activePiece[1] == j && activePiece[0] ==i) {
                                 ctx.fillStyle = "#e8d8e8"
+                            }
+                        }
+                        else if(c == 'KW') {
+                            ctx.fillStyle = "#e7d2e8";
+                            if(activePiece != null && activePiece[1] == j && activePiece[0] ==i) {
+                                ctx.fillStyle = "#d4d5a8"
                             }
                         }
                         ctx.fill();
