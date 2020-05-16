@@ -56,6 +56,7 @@
                     let validity = isMoveValid(posDex);
                     if(valueofPlaceToBe == '' && validity[0] == true) {
 
+                        //check if something is eaten
                         if(validity[1] == "ate") {
                             let posOfEatenPiece = validity[2];
                             board[posOfEatenPiece[1]][posOfEatenPiece[0]] = ''; //remove eaten piece
@@ -78,17 +79,21 @@
                             }
                         }
 
+                        //move piece
                         board[posDex[1]][posDex[0]] = c;
                         board[activePiece[1]][activePiece[0]] = '';
-                        activePiece = null;
+                        activePiece = null; //clear activePiece as turn is over
+
+                        //update turn
                         turn = turn == 'W' ? 'B' : 'W'; //switch turn
                         setTurnHeader();
                     }
-                    else if(activePiece[0] == posDex[0] && activePiece[1] == posDex[1]) { //click same pos removes it as active piece
-                        activePiece = null;
+                    else if(activePiece[0] == posDex[0] && activePiece[1] == posDex[1]) { 
+                        activePiece = null; //click same pos removes it as active piece, but turn is does not change
                     }
                 }
                
+                //redraw
                 drawTable();
                 drawPieces();
             });
@@ -103,14 +108,62 @@
             }
         }
 
+
+
+        //WIP
+        function getBestMoveAi() {
+            miniMax(0, true);
+        }
+
+        function miniMax(depth, isMaximizingPlayer) {
+
+            if(depth == 0 || isGameComplete()) {
+                //return evaluation of move
+            }
+
+            if(isMaximizingPlayer) {
+                let maxEval = -Infinity;
+                moveList = getAllMoves();
+                let move;
+                for(move of moveList) {
+                    //pretend to do that move //todo
+                    let score = minimax(depth + 1, false);
+                    //undo the move //todo
+                    if(score > maxEval) {
+                        maxEval = score;
+                        if(depth == 0) {
+                            //setmove to do //todo
+                        }
+                    }
+                }
+            }
+            else { //miniMizing player
+                let minEval = Infinity;
+                moveList = getAllMoves();
+                let move;
+                for(move of moveList) {
+                     //pretend to do that move //todo
+                     let score = minimax(depth + 1, true);
+                     //undo the move //todo
+                     score = min(score, minEval);
+                     if(score < minEval) {
+                        minEval = score;
+                    }
+                }
+            }
+        }
+
+
+
+
+
+
+
         function isMoveValid(posDexToCheck) {
             
             let yDif = posDexToCheck[1] - activePiece[1];
             let xDif = posDexToCheck[0] - activePiece[0];
             //normal move
-            //can only jump diagonals foward. 
-            //if white y greater than current
-            //if black y less than current
             let isThisAKingPiece = board[activePiece[1]][activePiece[0]].length == 2;
             if(!isThisAKingPiece) {
                 if(turn == 'W' && yDif == 1 && Math.abs(xDif) == 1) {
@@ -136,7 +189,7 @@
                     }
                 }
             }
-            else {
+            else { //king piece move check
                 if(Math.abs(yDif) == 1 && Math.abs(xDif) == 1) {
                     return [true, ""];
                 }
