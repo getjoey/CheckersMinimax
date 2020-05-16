@@ -3,6 +3,7 @@
 
     <div style="text-align: center;">
         <p id="turn" style="font-size : 30px;">Blacks Turn</p>
+        <p id="score" style="font-size : 24px;">White = 0pts ----- Black = 0pts</p>
         <canvas class="center" style="border: 3px solid green;" id="canvas" width="600" height="600">Your browser does not support the HTML5 canvas tag.</canvas>
     <div>
 
@@ -12,11 +13,19 @@
         var canvas;
         var ctx;
         var turnHeader;
+        var scoreHeader;
 
         var dim = 600/8;
         var turn = 'B';
-        const aiColor = 'W';
         var activePiece = null; //an array positions (i,j);
+
+        const aiColor = 'W';
+        const max_depth = 10; //for ai search
+        var scoreW = 0;
+        var scoreB = 0;
+
+        const valueGainedFromRegularPiece = 1;
+        const valueGainedFromKingPiece = 3;
 
         var board = [ //top down
             ['','W','','W','','W','','W'],
@@ -33,6 +42,7 @@
             canvas = document.getElementById("canvas");
             ctx = canvas.getContext("2d");
             turnHeader = document.getElementById("turn");
+            scoreHeader = document.getElementById("score");
             drawTable();
             drawPieces();
 
@@ -52,18 +62,32 @@
                     //place active piece where u clicked
                     let valueofPlaceToBe = board[posDex[1]][posDex[0]];
                     let c = board[activePiece[1]][activePiece[0]];
-                    console.log("active piece is a "+c);
                     let validity = isMoveValid(posDex);
                     if(valueofPlaceToBe == '' && validity[0] == true) {
 
                         //check if something is eaten
                         if(validity[1] == "ate") {
                             let posOfEatenPiece = validity[2];
-                            board[posOfEatenPiece[1]][posOfEatenPiece[0]] = ''; //remove eaten piece
+                            let eatenPieceType = board[posOfEatenPiece[1]][posOfEatenPiece[0]];
+
+                             //remove eaten piece
+                            board[posOfEatenPiece[1]][posOfEatenPiece[0]] = '';
+                            
+                            //augment score
+                            let valueGained = valueGainedFromRegularPiece;
+                            if(eatenPieceType.length == 2) { // a king piece
+                                valueGained = valueGainedFromKingPiece;
+                            }
+                            if(turn == 'W') {
+                                scoreW = scoreW + valueGained;
+                            }
+                            else {
+                                scoreB = scoreB + valueGained;
+                            }
+                            console.log(scoreW)
                         }
 
                         //check if active piece has become a king
-                        console.log(posDex[1]);
                         if(turn == 'W') {
                             //y == 7 is king
                             if(posDex[1] == 7) {
@@ -86,7 +110,7 @@
 
                         //update turn
                         turn = turn == 'W' ? 'B' : 'W'; //switch turn
-                        setTurnHeader();
+                        setDocumentData();
                     }
                     else if(activePiece[0] == posDex[0] && activePiece[1] == posDex[1]) { 
                         activePiece = null; //click same pos removes it as active piece, but turn is does not change
@@ -99,13 +123,14 @@
             });
         };
 
-        function setTurnHeader() {
+        function setDocumentData() {
             if(turn == 'W') {
-                turnHeader.innerText = "Whites Turn"
+                turnHeader.innerText = "Whites Turn";
             }
             else {
-                turnHeader.innerText = "Blacks Turn"
+                turnHeader.innerText = "Blacks Turn";
             }
+            scoreHeader.innerText = "White = "+scoreW+"pts ----- Black = "+scoreB+"pts";
         }
 
 
@@ -115,25 +140,36 @@
             miniMax(0, true);
         }
 
-        function getAllMoves() {
+        function getAllMoves(turnColor) {
             let movesList = [];
             
             //go through all pieces.. if this is one of your pieces. find every move it can do.
             //if its a move that eats +1, if king +3; otherwise 0.
             //TODO
+            
+            //a single move will contain its [currentPos,[all possible positions it can go to]]
+            for(let i=0; i<9; i++) {
+                for(let j=0; i<8; i++) {
+                    if(board[j][i] == turnColor) {
+                        
+                    }
+                } 
+            }
 
             return moveList;
         }
 
         function isGameComplete() {
             //if allMoves for Black is 0 and all moves for White is 0. Game Over. //TODO
+            //this means, person is stuck or has no pieces left
             return false;
         }
 
         function miniMax(depth, isMaximizingPlayer) {
 
-            if(depth == 0 || isGameComplete()) {
+            if(depth == 10 || isGameComplete()) {
                 //return evaluation of move
+                //check the board at this state... and see who has the most pieces?
             }
 
             if(isMaximizingPlayer) {
