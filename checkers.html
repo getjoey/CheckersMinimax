@@ -20,7 +20,8 @@
         var activePiece = null; //an array positions (i,j);
 
         const aiColor = 'W';
-        const max_depth = 10; //for ai search
+        var aiMoveToDo = null;
+        const max_depth = 3; //for ai search
         var scoreW = 0;
         var scoreB = 0;
 
@@ -47,212 +48,162 @@
             drawPieces();
 
             canvas.addEventListener('mousedown', function(e) {
-                const posDex = getCursorPosition(canvas, e);
+                if(turn != aiColor) {
+                    console.log("human turn");
+                    const posDex = getCursorPosition(canvas, e);
                 
-                if(activePiece == null) {
-                    let c = board[posDex[1]][posDex[0]];
-                    if(c.length == 2) {
-                        c = c.charAt(1); //in event its a King piece, remove the K part
+                    if(activePiece == null) {
+                        let c = board[posDex[1]][posDex[0]];
+                        if(c.length == 2) {
+                            c = c.charAt(1); //in event its a King piece, remove the K part
+                        }
+                        if((c == 'W' || c == 'B') && turn == c) {
+                            activePiece = posDex;
+                        }
                     }
-                    if((c == 'W' || c == 'B') && turn == c) {
-                        activePiece = posDex;
+                    else {
+                        //place active piece where u clicked
+                        let valueofPlaceToBe = board[posDex[1]][posDex[0]];
+                        let c = board[activePiece[1]][activePiece[0]];
+                        let validity = isMoveValid(posDex, activePiece);
+                        if(valueofPlaceToBe == '' && validity[0] == true) {
+
+                            //check if something is eaten
+                            if(validity[1] == "ate") {
+                                let posOfEatenPiece = validity[2];
+                                let eatenPieceType = board[posOfEatenPiece[1]][posOfEatenPiece[0]];
+
+                                //remove eaten piece
+                                board[posOfEatenPiece[1]][posOfEatenPiece[0]] = '';
+                                
+                                //augment score
+                                let valueGained = validity[3];
+                                if(turn == 'W') {
+                                    scoreW = scoreW + valueGained;
+                                }
+                                else {
+                                    scoreB = scoreB + valueGained;
+                                }
+                            }
+
+                            //check if active piece has become a king
+                            if(turn == 'W') {
+                                //y == 7 is king
+                                if(posDex[1] == 7) {
+                                    c = 'KW'
+                                }
+                            }
+                            else {
+                                //y == 0 is king
+                                if(posDex[1] == 0) {
+                                    c='KB'
+                                }
+                            }
+
+                            //move piece
+                            board[posDex[1]][posDex[0]] = c;
+                            board[activePiece[1]][activePiece[0]] = '';
+                            activePiece = null; //clear activePiece as turn is over
+
+                            //update turn
+                            turn = getOtherPlayerColor(turn);
+                            setDocumentData();
+                        }
+                        else if(activePiece[0] == posDex[0] && activePiece[1] == posDex[1]) { 
+                            activePiece = null; //click same pos removes it as active piece, but turn is does not change
+                        }
+                    }
+                
+                    if(isGameComplete()) {
+                        console.log("game over... to do specify who wins in header");
                     }
                 }
                 else {
-                    //place active piece where u clicked
-                    let valueofPlaceToBe = board[posDex[1]][posDex[0]];
-                    let c = board[activePiece[1]][activePiece[0]];
-                    let validity = isMoveValid(posDex);
-                    if(valueofPlaceToBe == '' && validity[0] == true) {
+                    console.log("ai turn")
+                    getBestMoveAi();
+                    console.log(aiMoveToDo);
+                    let y1 = aiMoveToDo[0][0];
+                    let x1 = aiMoveToDo[0][1];
+                    board[x1][y1] = '';
 
-                        //check if something is eaten
-                        if(validity[1] == "ate") {
-                            let posOfEatenPiece = validity[2];
-                            let eatenPieceType = board[posOfEatenPiece[1]][posOfEatenPiece[0]];
+                    let y2 = aiMoveToDo[1][0];
+                    let x2 = aiMoveToDo[1][1];
+                    board[x2][y2] = aiColor;
 
-                             //remove eaten piece
-                            board[posOfEatenPiece[1]][posOfEatenPiece[0]] = '';
-                            
-                            //augment score
-                            let valueGained = valueGainedFromRegularPiece;
-                            if(eatenPieceType.length == 2) { // a king piece
-                                valueGained = valueGainedFromKingPiece;
-                            }
-                            if(turn == 'W') {
-                                scoreW = scoreW + valueGained;
-                            }
-                            else {
-                                scoreB = scoreB + valueGained;
-                            }
-                            console.log(scoreW)
-                        }
-
-                        //check if active piece has become a king
-                        if(turn == 'W') {
-                            //y == 7 is king
-                            if(posDex[1] == 7) {
-                                console.log("white is king");
-                                c = 'KW'
-                            }
-                        }
-                        else {
-                            //y == 0 is king
-                            if(posDex[1] == 0) {
-                                console.log("black is king");
-                                c='KB'
-                            }
-                        }
-
-                        //move piece
-                        board[posDex[1]][posDex[0]] = c;
-                        board[activePiece[1]][activePiece[0]] = '';
-                        activePiece = null; //clear activePiece as turn is over
-
-                        //update turn
-                        turn = turn == 'W' ? 'B' : 'W'; //switch turn
-                        setDocumentData();
-                    }
-                    else if(activePiece[0] == posDex[0] && activePiece[1] == posDex[1]) { 
-                        activePiece = null; //click same pos removes it as active piece, but turn is does not change
-                    }
+                     //update turn
+                     turn = getOtherPlayerColor(turn);
+                            setDocumentData();
                 }
-               
-                //redraw
                 drawTable();
                 drawPieces();
             });
         };
 
-        function setDocumentData() {
-            if(turn == 'W') {
-                turnHeader.innerText = "Whites Turn";
-            }
-            else {
-                turnHeader.innerText = "Blacks Turn";
-            }
-            scoreHeader.innerText = "White = "+scoreW+"pts ----- Black = "+scoreB+"pts";
-        }
-
-
-
-        //WIP //note: aiColor = "W";
-        function getBestMoveAi() {
-            miniMax(0, true);
-        }
-
-        function getAllMoves(turnColor) {
-            let movesList = [];
+        function isMoveValid(posDexToCheck, pieceToBeMoved) {
             
-            //go through all pieces.. if this is one of your pieces. find every move it can do.
-            //if its a move that eats +1, if king +3; otherwise 0.
-            //TODO
-            
-            //a single move will contain its [currentPos,[all possible positions it can go to]]
-            for(let i=0; i<9; i++) {
-                for(let j=0; i<8; i++) {
-                    if(board[j][i] == turnColor) {
-                        
-                    }
-                } 
+            let valueOfPlaceToBe = board[posDexToCheck[1]][posDexToCheck[0]];
+            if(valueOfPlaceToBe != '') {
+                return [false, "can't move here"];
             }
 
-            return moveList;
-        }
+            let yDif = posDexToCheck[1] - pieceToBeMoved[1];
+            let xDif = posDexToCheck[0] - pieceToBeMoved[0];
 
-        function isGameComplete() {
-            //if allMoves for Black is 0 and all moves for White is 0. Game Over. //TODO
-            //this means, person is stuck or has no pieces left
-            return false;
-        }
-
-        function miniMax(depth, isMaximizingPlayer) {
-
-            if(depth == 10 || isGameComplete()) {
-                //return evaluation of move
-                //check the board at this state... and see who has the most pieces?
-            }
-
-            if(isMaximizingPlayer) {
-                let maxEval = -Infinity;
-                moveList = getAllMoves();
-                let move;
-                for(move of moveList) {
-                    //pretend to do that move //todo
-                    let score = minimax(depth + 1, false);
-                    //undo the move //todo
-                    if(score > maxEval) {
-                        maxEval = score;
-                        if(depth == 0) {
-                            //setmove to do //todo
-                        }
-                    }
-                }
-            }
-            else { //miniMizing player
-                let minEval = Infinity;
-                moveList = getAllMoves();
-                let move;
-                for(move of moveList) {
-                     //pretend to do that move //todo
-                     let score = minimax(depth + 1, true);
-                     //undo the move //todo
-                     score = min(score, minEval);
-                     if(score < minEval) {
-                        minEval = score;
-                    }
-                }
-            }
-        }
-
-
-
-
-
-
-
-        function isMoveValid(posDexToCheck) {
-            
-            let yDif = posDexToCheck[1] - activePiece[1];
-            let xDif = posDexToCheck[0] - activePiece[0];
             //normal move
-            let isThisAKingPiece = board[activePiece[1]][activePiece[0]].length == 2;
+            let isThisAKingPiece = board[pieceToBeMoved[1]][pieceToBeMoved[0]].length == 2;
             if(!isThisAKingPiece) {
                 if(turn == 'W' && yDif == 1 && Math.abs(xDif) == 1) {
-                    return [true, ""];
+                    return [true, "", null, 0];
                 }
                 else if(turn == 'B' && yDif == -1 && Math.abs(xDif) == 1) {
-                    return [true, ""];
+                    return [true, "", null, 0];
                 }
                 //killing move check
                 if(turn == 'W' && yDif == 2 && Math.abs(xDif) == 2) {
                     //check space in between
-                    let xMid = activePiece[0] + xDif/2;
-                    let yMid = activePiece[1] + yDif/2;
-                    if(board[yMid][xMid] == 'B' || board[yMid][xMid] == 'KB') {
-                        return [true, "ate", [xMid, yMid]];
+                    let xMid = pieceToBeMoved[0] + xDif/2;
+                    let yMid = pieceToBeMoved[1] + yDif/2;
+                    if(board[yMid][xMid] == 'B') {
+                        return [true, "ate", [xMid, yMid], valueGainedFromRegularPiece];
+                    }
+                    else if(board[yMid][xMid] == 'KB') {
+                        return [true, "ate", [xMid, yMid], valueGainedFromKingPiece];
                     }
                 }
                 else if(turn == 'B' && yDif == -2 && Math.abs(xDif) == 2) {
-                    let xMid = activePiece[0] + xDif/2;
-                    let yMid = activePiece[1] + yDif/2;
-                    if(board[yMid][xMid] == 'W' || board[yMid][xMid] == 'KW') {
-                        return [true, "ate", [xMid, yMid]];
+                    let xMid = pieceToBeMoved[0] + xDif/2;
+                    let yMid = pieceToBeMoved[1] + yDif/2;
+                    if(board[yMid][xMid] == 'W') {
+                        return [true, "ate", [xMid, yMid], valueGainedFromRegularPiece];
+                    }
+                    else if(board[yMid][xMid] == 'KW') {
+                        return [true, "ate", [xMid, yMid], valueGainedFromKingPiece];
                     }
                 }
             }
             else { //king piece move check
                 if(Math.abs(yDif) == 1 && Math.abs(xDif) == 1) {
-                    return [true, ""];
+                    return [true, "", null, 0];
                 }
                 //killing move check
                 if(Math.abs(yDif) == 2 && Math.abs(xDif) == 2) {
-                    let xMid = activePiece[0] + xDif/2;
-                    let yMid = activePiece[1] + yDif/2;
-                    if(turn == 'B' && (board[yMid][xMid] == 'W' || board[yMid][xMid] == 'KW')) {
-                        return [true, "ate", [xMid, yMid]];
+                    let xMid = pieceToBeMoved[0] + xDif/2;
+                    let yMid = pieceToBeMoved[1] + yDif/2;
+                    if(turn == 'B') {
+                        if(board[yMid][xMid] == 'W') {
+                            return [true, "ate", [xMid, yMid], valueGainedFromRegularPiece];
+                        }
+                        else if(board[yMid][xMid] == 'KW') {
+                            return [true, "ate", [xMid, yMid], valueGainedFromKingPiece];
+                        }
                     }
-                    else if(turn == 'W' && (board[yMid][xMid] == 'B' || board[yMid][xMid] == 'KB')) {
-                        return [true, "ate", [xMid, yMid]];
+                    else { //white turn
+                        if(board[yMid][xMid] == 'B') {
+                            return [true, "ate", [xMid, yMid], valueGainedFromRegularPiece];
+                        }
+                        else if(board[yMid][xMid] == 'KB') {
+                            return [true, "ate", [xMid, yMid], valueGainedFromKingPiece];
+                        }
                     }
                 }
             }
@@ -261,11 +212,236 @@
 
             //king move check 
 
-            return [false, ""];
+            return [false, "", null, 0];
         }
 
-        //click a tile, if it has a piece, and its equivalent to the turn, set it active
+        function getAllMoves(colorToCheck) {
+            let moveList = [];
+            
+            //go through all pieces.. if this is one of your pieces. find every move it can do.
+            //if its a move that eats +1, if king +3; otherwise 0.
+            //TODO
+            
+            //a single move will contain its [currentPos,[all possible positions it can go to]]
+            for(let i=0; i<8; i++) {
+                for(let j=0; j<8; j++) {
 
+                    let piece = board[i][j];
+                    const currPosDex = [j,i];
+                    let isKing = piece.length == 2;
+                    if(isKing) {
+                        piece = piece.charAt(1);
+                    }
+                    if(piece == colorToCheck) {
+                        
+                        let incPosXToBe = i+1;
+                        let decPosXToBe = i-1;
+                        let incPosYToBe = j+1;
+                        let decPosYToBe = j-1;
+                        let incJumpPosXToBe = i+2;
+                        let decJumpPosXToBe = i-2;
+                        let incJumpPosYToBe = j+2;
+                        let decJumpPosYToBe = j-2;
+
+                        //check all 8 possibilities //todo optimize this as many are obviously gonna return false
+                        //but for now itll work well since isMoveValid will check all of them
+
+                        //right 1 up 1 
+                        if(incPosXToBe <= 7 && incPosYToBe <= 7) {
+                            let validity1 = isMoveValid([incPosYToBe, incPosXToBe], currPosDex);
+                            if(validity1[0] == true) {
+                                moveList.push([currPosDex, validity1, [incPosYToBe, incPosXToBe]]);
+                            }
+                        }
+                       
+                        //left 1 up 1 
+                        if(decPosXToBe >=0 && incPosYToBe <= 7) {
+                            let validity2 = isMoveValid([incPosYToBe, decPosXToBe], currPosDex);
+                            if(validity2[0] == true) {
+                                moveList.push([currPosDex, validity2, [incPosYToBe, decPosXToBe]]);
+                            }
+                        }
+                        //right 1 down 1 
+                        if(incPosXToBe <= 7 && decPosYToBe >= 0) {
+                            let validity3 = isMoveValid([decPosYToBe, incPosXToBe], currPosDex);
+                            if(validity3[0] == true) {
+                                moveList.push([currPosDex, validity3, [decPosYToBe, incPosXToBe]]);
+                            }
+                        }
+                        //left 1 down 1 
+                        if(decPosXToBe >= 0 && decPosYToBe >= 0) {
+                            let validity4 = isMoveValid([decPosYToBe, decPosXToBe], currPosDex);
+                            if(validity4[0] == true) {
+                                moveList.push([currPosDex, validity4, [decPosYToBe, decPosXToBe]]);
+                            }
+                        }
+                        /*
+                        //2move ate
+                         //right 2 up 2 
+                         if(incJumpPosXToBe <= 7 && incJumpPosYToBe <= 7) {
+                            let validity1 = isMoveValid([incPosYToBe, incPosXToBe], currPosDex);
+                            if(validity1[0] == true) {
+                                moveList.push([currPosDex, validity1]);
+                            }
+                        }
+                       
+                        //left 2 up 2 
+                        if(decJumpPosXToBe >=0 && incJumpPosYToBe <= 7) {
+                            let validity2 = isMoveValid([incPosYToBe, decPosXToBe], currPosDex);
+                            if(validity2[0] == true) {
+                                moveList.push([currPosDex, validity2]);
+                            }
+                        }
+                        //right 2 down 2 
+                        if(incJumpPosXToBe <= 7 && decJumpPosYToBe >= 0) {
+                            let validity3 = isMoveValid([decPosYToBe, incPosXToBe], currPosDex);
+                            if(validity3[0] == true) {
+                                moveList.push([currPosDex, validity3]);
+                            }
+                        }
+                        //left 2 down 2 
+                        if(decJumpPosXToBe >= 0 && decJumpPosYToBe >= 0) {
+                            let validity4 = isMoveValid([decPosYToBe, decPosXToBe], currPosDex);
+                            if(validity4[0] == true) {
+                                moveList.push([currPosDex, validity4]);
+                            }
+                        }
+                        */
+
+                    }
+                } 
+            }
+
+            return moveList;
+        }
+
+        function isGameComplete() {
+            //if allMoves for Black is 0 or all moves for White is 0. Game Over. //TODO
+            //this means, person is stuck or has no pieces left
+            let whiteMovesLen = getAllMoves('W').length;
+            let blackMovesLen = getAllMoves('B').length;
+           
+            if(turn == 'W' && whiteMovesLen == 0) {
+                console.log("White loses");
+                return true;
+            }
+            else if(turn == 'B' && blackMovesLen == 0) {
+                console.log("Black loses");
+                return true;
+            }
+            //or if cant win in 40-50 moves, king chasing....
+            return false;
+        }
+
+        //returns the dif between white to black pieces (positive means white is winning)
+        function evaluateBoard(colorToEvaluate) {
+            let piecesW = 0;
+            let piecesB = 0;
+
+            for(let i=0; i<8; i++) {
+                for(let j=0; j<8; j++) {
+
+                    let piece = board[i][j];
+                    if(piece.length == 2) { //king
+                        piece = piece.charAt(1);
+                    }
+                    if(piece == 'W') {
+                        piecesW++;
+                    }
+                    else if(piece == 'B') {
+                        piecesB++;
+                    }
+                }
+            }
+
+            if(colorToEvaluate == 'W') {
+                return piecesW - piecesB;
+            }
+            return piecesB - piecesW;
+        }
+
+        function getOtherPlayerColor(currentPlayerColor) {
+            return currentPlayerColor == 'W' ? 'B' : 'W';
+        }
+
+
+        function getBestMoveAi() {
+            var boardCopy = [];
+            for(let i=0; i<8; i++) {
+                let line = [];
+                for(let j=0; j<8; j++) {
+                    line.push(board[i][j]);
+                }
+                boardCopy.push(line);
+            }
+
+            miniMax(boardCopy, 0, true, aiColor);
+        }
+
+        function miniMax(boardCopy, depth, isMaximizingPlayer, theTurnColor) {
+            
+            if(depth == 1 || isGameComplete()) {
+                //return evaluation of move
+                //check the board at this state... and see who has the most pieces?
+                //probably want to check how many king pieces u get out of it too..
+                return evaluateBoard(theTurnColor);
+            }
+
+            if(isMaximizingPlayer) {
+                let maxEval = -Infinity;
+                allMoveList = getAllMoves(theTurnColor);
+
+                let pieceMoveList;
+                for(pieceMoveList of allMoveList) { //array of curPos to validity
+                    //pretend to do that move //todo
+                    //let posToGoTo = move[1][2]; //contains a [x,y] to go to
+                    // board[posToGoTo[1]][posToGoTo[0]] = theTurnColor;
+                    let posToGoTo = pieceMoveList[2];
+                    let curPos = pieceMoveList[0];
+
+                    boardCopy[posToGoTo[0][posToGoTo[1]]] = theTurnColor;
+                    let score = miniMax(boardCopy, depth + 1, false, getOtherPlayerColor(theTurnColor));
+                    boardCopy[posToGoTo[0]][posToGoTo[1]] = '';
+
+                    //undo the move //todo
+                    if(score >= maxEval) {
+                        maxEval = score;
+                        if(depth == 0) {
+                            //setmove to do //todo
+                            aiMoveToDo = [curPos,posToGoTo];
+                        }
+                     }
+                        
+                }
+            }
+            else { //miniMizing player
+                let minEval = Infinity;
+                allMoveList = getAllMoves(theTurnColor);
+
+                let pieceMoveList;
+                for(pieceMoveList of allMoveList) { //array of curPos to validity
+                    //pretend to do that move //todo
+                    //let posToGoTo = move[1][2]; //contains a [x,y] to go to
+                    // board[posToGoTo[1]][posToGoTo[0]] = theTurnColor;
+                    let posToGoTo = pieceMoveList[2];
+                    let curPos = pieceMoveList[0];
+
+                    boardCopy[posToGoTo[0][posToGoTo[1]]] = theTurnColor;
+                    let score = miniMax(boardCopy, depth + 1, true, getOtherPlayerColor(theTurnColor));
+                    boardCopy[posToGoTo[0]][posToGoTo[1]] = '';
+
+                    //undo the move //todo
+                    if(score < minEval) {
+                        minEval = score;
+                    }
+                        
+                }
+            }
+        }
+
+
+
+        //doc js stuff
         function drawTable() {
             let white = true;
             for(let i=0; i<8; i++) {
@@ -335,6 +511,17 @@
             const yIndex = Math.floor(y / dim);
             return [xIndex, yIndex];
          }
+
+         function setDocumentData() {
+            if(turn == 'W') {
+                turnHeader.innerText = "Whites Turn";
+            }
+            else {
+                turnHeader.innerText = "Blacks Turn";
+            }
+            scoreHeader.innerText = "White = "+scoreW+"pts ----- Black = "+scoreB+"pts";
+        }
+
 
     </script>
 
